@@ -1,499 +1,349 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>SCAO - Control de Avance de Obra</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
-  <style>
-    /* (mantengo tus estilos originales) */
-    .view-section { display: none; }
-    #view-daily { display: block; }
-    .loader { border-top-color: #4f46e5; animation: spin 1s linear infinite; }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    .ppc-badge { font-weight: bold; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; }
-    .ppc-high { background-color: #d1fae5; color: #065f46; }
-    .ppc-mid { background-color: #fef3c7; color: #92400e; }
-    .ppc-low { background-color: #fee2e2; color: #991b1b; }
-    .animate-fade-in { animation: fadeIn 0.5s ease-out; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SCAO | Sistema de Control y Avance de Obra</title>
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #f2f4f7;
+        margin: 0;
+        padding: 0;
+    }
+    header {
+        background: #003366;
+        color: #fff;
+        padding: 15px;
+        text-align: center;
+        font-size: 22px;
+        font-weight: bold;
+    }
+    .container {
+        padding: 15px;
+    }
+    .card {
+        background: #fff;
+        padding: 15px;
+        border-radius: 6px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        margin-bottom: 20px;
+    }
+    input, select, button, textarea {
+        width: 100%;
+        padding: 8px;
+        margin-top: 8px;
+        margin-bottom: 15px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+        font-size: 15px;
+    }
+    button {
+        background: #003366;
+        color: white;
+        border: none;
+        cursor: pointer;
+    }
+    button:hover {
+        opacity: 0.8;
+    }
+    .hidden {
+        display: none;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+    }
+    th, td {
+        border: 1px solid #ccc;
+        padding: 8px;
+        font-size: 14px;
+    }
+    th {
+        background: #003366;
+        color: white;
+    }
+</style>
 </head>
-<body class="bg-gray-100 min-h-screen font-sans text-gray-800 relative">
 
-  <div id="notification" class="hidden fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-xl text-white font-bold transform transition-all duration-500"></div>
+<body>
 
-  <!-- LOGIN -->
-  <div id="login-screen" class="fixed inset-0 bg-gradient-to-br from-blue-900 to-indigo-800 z-50 flex flex-col items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center animate-fade-in relative z-10">
-      <div class="mb-6">
-        <div class="bg-indigo-100 p-4 rounded-full w-20 h-20 mx-auto flex items-center justify-center mb-4">
-          <i class="fas fa-hard-hat text-4xl text-indigo-600"></i>
-        </div>
-        <h1 class="text-3xl font-black text-gray-900 mb-1 tracking-tight">SCAO</h1>
-        <p class="text-gray-500 text-sm font-medium">Sistema de Control de Avance de Obra</p>
-      </div>
+<header>SCAO - Sistema de Control y Avance de Obra</header>
 
-      <p class="text-xs font-bold text-gray-400 mb-6 uppercase tracking-widest border-b border-gray-100 pb-2">Seleccione Perfil</p>
+<div class="container">
 
-      <div class="space-y-4">
-        <button onclick="selectRole('FISCAL')" class="w-full py-4 border-2 border-blue-100 text-blue-700 bg-blue-50 hover:bg-blue-100 hover:border-blue-300 rounded-xl font-bold transition flex items-center justify-center group">
-          <i class="fas fa-user-shield mr-3 text-xl group-hover:scale-110 transition-transform"></i> FISCAL DE OBRA
-        </button>
-        <button onclick="selectRole('CONTRATISTA')" class="w-full py-4 border-2 border-gray-100 text-gray-600 bg-gray-50 hover:bg-gray-100 hover:border-gray-300 rounded-xl font-bold transition flex items-center justify-center group">
-          <i class="fas fa-building mr-3 text-xl group-hover:scale-110 transition-transform"></i> CONTRATISTA
-        </button>
-        <button onclick="showSupervisorSelect()" class="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition transform hover:-translate-y-1 flex items-center justify-center group">
-          <i class="fas fa-edit mr-3 text-xl group-hover:scale-110 transition-transform"></i> SUPERVISOR
-        </button>
-      </div>
-
-      <div id="supervisor-login-area" class="hidden mt-6 pt-6 border-t border-gray-100 animate-fade-in">
-        <label class="block text-left text-xs font-bold text-gray-500 mb-2 uppercase">Identifíquese:</label>
-        <select id="login-supervisor-select" class="w-full p-3 border border-indigo-300 rounded-lg mb-4 bg-indigo-50 focus:ring-2 focus:ring-indigo-500 outline-none text-gray-700">
-          <option value="">Cargando lista...</option>
-        </select>
-        <button onclick="loginSupervisor()" class="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 shadow-md transition">
-          Ingresar al Sistema
-        </button>
-        <button onclick="resetLogin()" class="mt-4 text-xs text-gray-400 hover:text-gray-600 underline">Cancelar</button>
-      </div>
+    <!-- LOGIN -->
+    <div id="loginCard" class="card">
+        <h3>Ingreso</h3>
+        <input type="text" id="usuario" placeholder="Usuario">
+        <button onclick="login()">Ingresar</button>
     </div>
 
-    <div class="absolute bottom-6 text-center w-full px-4 z-0">
-      <p class="text-indigo-200 text-xs opacity-80 font-light">
-        Desarrollado por Zacarias Ortega para el Proyecto Construcción Hospital de Segundo Nivel Isaias - Oruro
-      </p>
-    </div>
-  </div>
-
-  <!-- APP -->
-  <div id="app-content" class="hidden container mx-auto px-4 py-6 max-w-6xl pb-20">
-    <header class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6 flex flex-col md:flex-row justify-between items-center">
-      <div class="flex items-center mb-4 md:mb-0">
-        <div class="bg-indigo-100 p-2 rounded-lg mr-4">
-          <i class="fas fa-chart-pie text-2xl text-indigo-700"></i>
-        </div>
-        <div>
-          <h1 class="text-xl font-bold text-gray-900 tracking-tight">SCAO Digital</h1>
-          <div class="flex items-center gap-2 mt-1">
-            <span id="user-badge" class="text-xs font-bold bg-gray-100 text-gray-600 px-2 py-0.5 rounded border border-gray-200">...</span>
-            <span id="role-badge" class="text-xs font-bold bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-100">...</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- IMPORTANT: select global-supervisor añadido (oculto visualmente pero disponible para JS) -->
-      <select id="global-supervisor" class="hidden"></select>
-
-      <button onclick="location.reload()" class="text-xs text-red-500 hover:text-red-700 font-semibold flex items-center bg-red-50 px-4 py-2 rounded-lg hover:bg-red-100 transition">
-        <i class="fas fa-sign-out-alt mr-2"></i> Cerrar Sesión
-      </button>
-    </header>
-
-    <!-- (resto del HTML: menús y vistas — idéntico a tu estructura, omito por brevedad) -->
-
-    <!-- Simplifico: reutilizo tus vistas exactamente -->
-    <!-- VIEW PLAN, VIEW DAILY, VIEW NOTES (usa el mismo marcado que me enviaste) -->
-    <!-- Para mantener respuesta manejable, agrego el bloque daily (el núcleo) y mantengo el resto como en tu original. -->
-
-    <!-- VISTA 2: CONTROL DIARIO Y PPC (El Núcleo) -->
-    <div id="view-daily" class="view-section animate-fade-in">
-      <div class="bg-white rounded-xl shadow-lg p-6 mb-6 border border-gray-200">
-        <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
-          <div class="flex items-center gap-3 w-full md:w-auto">
-            <label class="font-bold text-gray-700 text-sm uppercase tracking-wide text-xs">Fecha de Control:</label>
-            <input type="date" id="daily-date" class="border border-gray-300 p-2 rounded-lg text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none bg-white shadow-sm font-bold">
-          </div>
-          <div class="text-center md:text-right w-full md:w-auto flex items-center justify-end gap-4">
-            <div class="text-right">
-              <span class="block text-[10px] text-gray-400 uppercase font-bold tracking-wider">PPC Diario</span>
-              <span class="text-xs text-gray-500 font-medium">Plan Cumplido</span>
-            </div>
-            <div id="daily-ppc-score" class="text-4xl font-black text-gray-300 bg-white px-4 py-1 rounded-lg border border-gray-200 shadow-sm">--%</div>
-          </div>
-        </div>
-
-        <div id="tasks-container" class="space-y-6">
-          <div class="text-center py-12 text-gray-500">
-            <div class="loader h-8 w-8 border-4 border-t-4 border-indigo-500 rounded-full mx-auto mb-3"></div>
-            Cargando plan del día...
-          </div>
-        </div>
-
-        <div class="mt-8 pt-6 border-t border-gray-100 text-right action-btn" id="daily-actions">
-          <button onclick="submitDailyReport()" id="btn-submit-daily" class="bg-green-600 text-white px-8 py-4 rounded-lg shadow-lg hover:bg-green-700 font-bold text-lg transition transform hover:-translate-y-1 flex items-center justify-center ml-auto w-full md:w-auto">
-            <i class="fas fa-check-circle mr-2"></i> Calcular PPC y Guardar Reporte
-          </button>
-        </div>
-      </div>
+    <!-- MENU -->
+    <div id="menuCard" class="card hidden">
+        <h3>Bienvenido <span id="userName"></span></h3>
+        <button onclick="showPPC()">Registrar Avance PPC</button>
+        <button onclick="showNotas()">Registrar Nota de Campo</button>
+        <button onclick="showListaNotas()">Ver Notas Emitidas</button>
+        <button onclick="logout()">Salir</button>
     </div>
 
-    <!-- Puedes añadir resto de vistas (plan, notes) tal cual las tenías -->
-  </div>
+    <!-- PPC -->
+    <div id="ppcCard" class="card hidden">
+        <h3>Registro Avance PPC</h3>
 
-  <script>
-    // ==============================================
-    // CONFIGURACIÓN API (ajusta si cambia)
-    const API_URL = "https://script.google.com/macros/s/AKfycbzNnSj-yt3hV4OuLjGP3mn9x-HqiS2TvH9sPVOfFa9ieDmr0xGJexCGHXNvpSBcCIiA/exec";
-    // ==============================================
+        <label>Fecha</label>
+        <input type="date" id="fechaPPC">
 
-    let currentTasks = [];
-    let currentUser = { name: "Invitado", role: "GUEST" };
-    let userListCache = [];
+        <label>Supervisor</label>
+        <select id="supervisorSelect"></select>
 
-    const causas = [
-      "Lluvia / Clima",
-      "Falta de Personal",
-      "Falta de Material",
-      "Espera de RDI",
-      "Falla de Equipo",
-      "Rendimiento Bajo",
-      "Interferencia",
-      "Otros"
-    ];
+        <button onclick="cargarTareas()">Cargar Tareas</button>
 
-    document.addEventListener('DOMContentLoaded', () => {
-      const today = new Date().toISOString().split('T')[0];
-      document.getElementById('daily-date').value = today;
-      document.getElementById('daily-date').addEventListener('change', loadDailyTasks);
+        <div id="tareasContainer"></div>
 
-      fetchUserList();
+        <button onclick="guardarPPC()">Guardar PPC</button>
+        <button onclick="backMenu()">Volver</button>
+    </div>
 
-      // Si tienes formularios, agrega listeners como antes
-      // document.getElementById('form-plan').addEventListener('submit', savePlan);
-      // document.getElementById('form-note').addEventListener('submit', saveNote);
+    <!-- REGISTRO NOTAS -->
+    <div id="notasCard" class="card hidden">
+        <h3>Registro de Nota de Campo</h3>
+
+        <label>Emisor</label>
+        <input type="text" id="notaEmisor">
+
+        <label>Receptor</label>
+        <input type="text" id="notaReceptor">
+
+        <label>Asunto</label>
+        <input type="text" id="notaAsunto">
+
+        <label>Instrucción</label>
+        <textarea id="notaInstruccion"></textarea>
+
+        <button onclick="guardarNotaCampo()">Guardar Nota</button>
+        <button onclick="backMenu()">Volver</button>
+    </div>
+
+    <!-- LISTA NOTAS -->
+    <div id="listaNotasCard" class="card hidden">
+        <h3>Notas Emitidas</h3>
+        <table id="tablaNotas"></table>
+        <button onclick="backMenu()">Volver</button>
+    </div>
+
+</div>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbwfr3clRSqVxQsivhLgVoK_yIkzLYhsQMRM2txTwoAFGd_x0pcqO3N_9EnAo-sQKQRz/exec";  // Reemplazar por tu WebApp
+
+// -------- LOGIN -----------
+function login() {
+    const user = document.getElementById("usuario").value.trim();
+    if (!user) return alert("Ingrese usuario");
+    localStorage.setItem("scaoUser", user);
+    document.getElementById("userName").innerText = user;
+
+    document.getElementById("loginCard").classList.add("hidden");
+    document.getElementById("menuCard").classList.remove("hidden");
+
+    cargarSupervisores();
+}
+
+function logout() {
+    localStorage.clear();
+    location.reload();
+}
+
+// --------- NAVEGACIÓN ----------
+function showPPC() {
+    document.getElementById("menuCard").classList.add("hidden");
+    document.getElementById("ppcCard").classList.remove("hidden");
+}
+function showNotas() {
+    document.getElementById("menuCard").classList.add("hidden");
+    document.getElementById("notasCard").classList.remove("hidden");
+}
+function showListaNotas() {
+    document.getElementById("menuCard").classList.add("hidden");
+    document.getElementById("listaNotasCard").classList.remove("hidden");
+    cargarNotasEmitidas();
+}
+function backMenu() {
+    document.querySelectorAll(".card").forEach(c => c.classList.add("hidden"));
+    document.getElementById("menuCard").classList.remove("hidden");
+}
+
+// --------- SUPERVISORES ----------
+async function cargarSupervisores() {
+    try {
+        const r = await fetch(`${API_URL}?action=getUsuarios`);
+        const d = await r.json();
+
+        const sel = document.getElementById("supervisorSelect");
+        sel.innerHTML = "";
+
+        d.usuarios.forEach(u => {
+            const op = document.createElement("option");
+            op.value = u;
+            op.textContent = u;
+            sel.appendChild(op);
+        });
+
+    } catch (e) {
+        alert("Error cargando supervisores");
+    }
+}
+
+// --------- CARGAR TAREAS ----------
+async function cargarTareas() {
+    const fecha = document.getElementById("fechaPPC").value;
+    if (!fecha) return alert("Seleccione fecha");
+
+    try {
+        const r = await fetch(`${API_URL}?action=getTareasDelDia&fecha=${fecha}`);
+        const d = await r.json();
+
+        const cont = document.getElementById("tareasContainer");
+        cont.innerHTML = "";
+
+        if (!d.tareas.length) {
+            cont.innerHTML = "<p>No hay tareas programadas.</p>";
+            return;
+        }
+
+        d.tareas.forEach(t => {
+            cont.innerHTML += `
+                <div class="card">
+                    <b>${t.descripcion}</b><br>
+                    Unidad: ${t.unidad}<br>
+                    <label>Meta día</label>
+                    <input type="number" id="meta_${t.id_tarea}">
+                    <label>Ejecutado</label>
+                    <input type="number" id="ejecutado_${t.id_tarea}">
+                    <label>Causa</label>
+                    <input type="text" id="causa_${t.id_tarea}">
+                    <label>Observación</label>
+                    <input type="text" id="obs_${t.id_tarea}">
+                </div>
+            `;
+        });
+
+    } catch (e) {
+        alert("Error cargando tareas");
+    }
+}
+
+// --------- GUARDAR PPC ----------
+async function guardarPPC() {
+    const fecha = document.getElementById("fechaPPC").value;
+    const supervisor = document.getElementById("supervisorSelect").value;
+
+    const tareasDiv = document.getElementById("tareasContainer");
+    const inputs = tareasDiv.querySelectorAll("input");
+
+    if (!inputs.length) return alert("No hay tareas cargadas");
+
+    const detalles = [];
+
+    inputs.forEach(inp => {
+        const id = inp.id.split("_")[1];
+        if (!detalles.find(d => d.id_tarea === id)) {
+            detalles.push({
+                id_tarea: id,
+                meta_dia: document.getElementById("meta_" + id).value,
+                ejecutado_dia: document.getElementById("ejecutado_" + id).value,
+                causa: document.getElementById("causa_" + id).value,
+                observacion: document.getElementById("obs_" + id).value
+            });
+        }
     });
 
-    // ---------- FETCH USUARIOS (robusto) ----------
-    async function fetchUserList() {
-      if (!API_URL || API_URL.includes("PEGUE")) { showNotify("Configure la API URL en el código", "error"); return; }
-      try {
-        const url = `${API_URL}?action=getUsuarios`;
-        const r = await fetch(url, { method: 'GET', cache: 'no-store' });
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const res = await r.json();
-
-        if (res.status === 'success' && Array.isArray(res.usuarios)) {
-          userListCache = res.usuarios;
-          const sel = document.getElementById('login-supervisor-select');
-          const globalSel = document.getElementById('global-supervisor');
-
-          let options = '<option value="">-- Seleccione su Nombre --</option>';
-          res.usuarios.forEach(u => options += `<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`);
-
-          if (sel) sel.innerHTML = options;
-          if (globalSel) globalSel.innerHTML = options;
-        } else {
-          showNotify("No se encontraron usuarios (getUsuarios).", "error");
-          console.warn("getUsuarios result:", res);
-          const sel = document.getElementById('login-supervisor-select');
-          if (sel) sel.innerHTML = '<option value="">Error cargando lista</option>';
-        }
-      } catch (e) {
-        console.error("fetchUserList error:", e);
-        showNotify("Error conectando API (usuarios). Revise la URL/API.", "error");
-        const sel = document.getElementById('login-supervisor-select');
-        if (sel) sel.innerHTML = '<option value="">Error de conexión</option>';
-      }
-    }
-
-    // LOGIN / ROLES
-    function selectRole(role) {
-      if (role === 'FISCAL' || role === 'CONTRATISTA') {
-        enterApp({ name: role, role: 'READ_ONLY' });
-      }
-    }
-    function showSupervisorSelect() { document.getElementById('supervisor-login-area').classList.remove('hidden'); }
-    function resetLogin() { document.getElementById('supervisor-login-area').classList.add('hidden'); }
-
-    function loginSupervisor() {
-      const name = document.getElementById('login-supervisor-select').value;
-      if (!name) return alert("Seleccione su nombre de la lista");
-      enterApp({ name: name, role: 'SUPERVISOR' });
-      const globalSel = document.getElementById('global-supervisor');
-      if (globalSel) globalSel.value = name;
-    }
-
-    function enterApp(user) {
-      currentUser = user;
-      document.getElementById('login-screen').style.display = 'none';
-      document.getElementById('app-content').style.display = 'block';
-      document.getElementById('user-badge').innerHTML = `<i class="fas fa-user-circle mr-1"></i> ${escapeHtml(user.name)}`;
-      document.getElementById('role-badge').innerText = (user.role === 'READ_ONLY') ? 'Modo Visualización' : 'Modo Registro';
-      const roleBadge = document.getElementById('role-badge');
-      roleBadge.className = user.role === 'READ_ONLY' 
-        ? "text-xs font-bold bg-green-100 text-green-800 px-3 py-1 rounded-full" 
-        : "text-xs font-bold bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full";
-
-      if (user.role === 'READ_ONLY') {
-        document.getElementById('app-content').classList.add('readonly-mode');
-        // ocultaciones opcionales...
-        loadDailyTasks();
-        //loadNotes(); load other data
-        switchTab('daily');
-      } else {
-        loadDailyTasks();
-        switchTab('daily');
-      }
-    }
-
-    // ---------- LOAD DAILY ----------
-    async function loadDailyTasks() {
-      if (!API_URL || API_URL.includes("PEGUE")) { showNotify("Configure la API URL en el código", "error"); return; }
-      const date = document.getElementById('daily-date').value;
-      const container = document.getElementById('tasks-container');
-      container.innerHTML = '<div class="text-center py-12 text-gray-500"><div class="loader h-8 w-8 border-4 border-t-4 border-indigo-500 rounded-full mx-auto mb-3"></div>Consultando plan del día...</div>';
-
-      try {
-        const r = await fetch(`${API_URL}?action=getTareasDelDia&fecha=${encodeURIComponent(date)}`);
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const res = await r.json();
-        if (res.status !== 'success') throw new Error(res.message || 'Respuesta API inválida');
-
-        container.innerHTML = '';
-        currentTasks = Array.isArray(res.tareas) ? res.tareas : [];
-        calculateDailyPPCDisplay(res.avances || []);
-
-        if (currentTasks.length === 0) {
-          container.innerHTML = `<div class="text-center p-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-            <i class="fas fa-calendar-times text-4xl text-gray-400 mb-3"></i>
-            <p class="text-gray-500 font-bold">No hay tareas programadas para hoy.</p>
-            <p class="text-xs text-gray-400">Revise la carga del Look-Ahead.</p>
-          </div>`;
-          return;
-        }
-
-        currentTasks.forEach((t, idx) => {
-          const previo = (res.avances || []).find(a => String(a.id_tarea) == String(t.id_tarea)) || null;
-          const metaDefecto = (t.tipo_plan === 'Diario') ? t.meta_total : '';
-          const metaVal = previo ? previo.meta_dia : (metaDefecto || '');
-          const ejecVal = previo ? previo.ejecutado_dia : '';
-          const obsVal = previo ? previo.observaciones : '';
-
-          // Construcción del bloque
-          const unidad = t.unidad || '';
-          container.insertAdjacentHTML('beforeend', `
-            <div class="bg-white border border-gray-200 p-5 rounded-xl shadow-sm hover:shadow-md transition duration-300 group relative overflow-hidden">
-              <div class="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
-              <div class="flex justify-between items-start mb-4 pl-2">
-                <div>
-                  <h4 class="font-bold text-lg text-gray-800 group-hover:text-indigo-700 transition">${escapeHtml(t.descripcion || '')}</h4>
-                  <div class="flex gap-2 mt-1">
-                    <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded border border-gray-200">ID: ${escapeHtml(t.id_tarea || '')}</span>
-                    <span class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-100">${escapeHtml(t.tipo_plan || 'Plan')}</span>
-                  </div>
-                </div>
-                <span class="text-sm font-bold text-gray-500 bg-gray-100 px-3 py-1 rounded-full">${escapeHtml(unidad)}</span>
-              </div>
-
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-6 bg-gray-50 p-4 rounded-lg border border-gray-100 items-center">
-                <div>
-                  <label class="block text-xs font-bold text-indigo-600 uppercase mb-1">Programado (Meta)</label>
-                  <div class="relative">
-                    <input type="number" id="meta-${idx}" value="${escapeHtml(metaVal)}" class="w-full p-2 border-2 border-indigo-100 rounded-lg font-bold text-center focus:border-indigo-500 outline-none text-gray-700" placeholder="0.00" oninput="calcPPC(${idx})">
-                    <span class="absolute right-3 top-2.5 text-xs text-gray-400 font-bold">${escapeHtml(unidad)}</span>
-                  </div>
-                </div>
-
-                <div>
-                  <label class="block text-xs font-bold text-green-600 uppercase mb-1">Ejecutado (Real)</label>
-                  <div class="relative">
-                    <input type="number" id="exec-${idx}" value="${escapeHtml(ejecVal)}" class="w-full p-2 border-2 border-green-100 rounded-lg font-bold text-center focus:border-green-500 outline-none text-gray-700" placeholder="0.00" oninput="calcPPC(${idx})">
-                    <span class="absolute right-3 top-2.5 text-xs text-gray-400 font-bold">${escapeHtml(unidad)}</span>
-                  </div>
-                </div>
-
-                <div class="flex flex-col justify-center items-center bg-white p-2 rounded border border-gray-200 shadow-sm h-full">
-                  <span class="text-[10px] font-bold text-gray-400 uppercase">Cumplimiento</span>
-                  <div id="ppc-badge-${idx}" class="text-2xl font-black text-gray-300">--%</div>
-                </div>
-              </div>
-
-              <div id="deviation-row-${idx}" class="mt-4 hidden p-3 bg-red-50 rounded border border-red-100 animate-fade-in">
-                <label class="block text-xs font-bold text-red-600 uppercase mb-1"><i class="fas fa-exclamation-circle mr-1"></i> Causa de Desviación (Requerido)</label>
-                <select id="causa-${idx}" class="w-full p-2 border border-red-300 bg-white rounded text-sm text-gray-700 focus:ring-red-500">
-                  <option value="">Seleccione motivo...</option>
-                  ${causas.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('')}
-                </select>
-              </div>
-
-              <input type="text" id="obs-${idx}" value="${escapeHtml(obsVal)}" class="w-full mt-4 p-2 text-sm text-gray-600 placeholder-gray-400 border-b border-transparent focus:border-indigo-300 focus:bg-gray-50 transition-all outline-none rounded" placeholder="Observaciones adicionales...">
-            </div>
-          `);
-
-          if (metaVal && ejecVal) calcPPC(idx);
-        });
-
-      } catch (e) {
-        console.error("loadDailyTasks error:", e);
-        showNotify("Error: " + (e.message || e.toString()), "error");
-        container.innerHTML = '<div class="text-center py-8 text-red-500">Error al cargar tareas. Revise la consola.</div>';
-      }
-    }
-
-    // ---------- Cálculo PPC ----------
-    function calcPPC(idx) {
-      const meta = parseFloat((document.getElementById(`meta-${idx}`) || {value:0}).value) || 0;
-      const exec = parseFloat((document.getElementById(`exec-${idx}`) || {value:0}).value) || 0;
-      const badge = document.getElementById(`ppc-badge-${idx}`);
-      const devRow = document.getElementById(`deviation-row-${idx}`);
-      if (!badge) return;
-      if (meta === 0) {
-        badge.textContent = "--%";
-        badge.className = "text-2xl font-black text-gray-300";
-        if (devRow) devRow.classList.add('hidden');
-        return;
-      }
-      let ppc = (exec / meta) * 100;
-      badge.textContent = Math.round(ppc) + "%";
-      if (ppc >= 100) {
-        badge.className = "text-2xl font-black text-green-500";
-        if (devRow) devRow.classList.add('hidden');
-        const causaSel = document.getElementById(`causa-${idx}`);
-        if (causaSel) causaSel.value = "";
-      } else {
-        badge.className = "text-2xl font-black text-red-500";
-        if (devRow) devRow.classList.remove('hidden');
-      }
-    }
-
-    function calculateDailyPPCDisplay(avances) {
-      const scoreEl = document.getElementById('daily-ppc-score');
-      if (!avances || avances.length === 0) {
-        scoreEl.textContent = "--%";
-        scoreEl.className = "text-4xl font-black text-gray-300";
-        return;
-      }
-      let totalPPC = 0, count = 0;
-      avances.forEach(a => {
-        let meta = parseFloat(a.meta_dia) || 0;
-        let exec = parseFloat(a.ejecutado_dia) || 0;
-        if (meta > 0) {
-          let ppc = (exec / meta) * 100;
-          if (ppc > 100) ppc = 100;
-          totalPPC += ppc;
-          count++;
-        }
-      });
-      if (count === 0) return;
-      const dailyAverage = Math.round(totalPPC / count);
-      scoreEl.textContent = dailyAverage + "%";
-      if (dailyAverage >= 85) scoreEl.className = "text-4xl font-black text-green-600 bg-green-50 px-4 py-1 rounded-lg border border-green-200";
-      else if (dailyAverage >= 70) scoreEl.className = "text-4xl font-black text-yellow-500 bg-yellow-50 px-4 py-1 rounded-lg border border-yellow-200";
-      else scoreEl.className = "text-4xl font-black text-red-600 bg-red-50 px-4 py-1 rounded-lg border border-red-200";
-    }
-
-    // ---------- SUBMIT DAILY ----------
-    function submitDailyReport() {
-      if (currentUser.role === 'READ_ONLY') return showNotify("Modo solo lectura - no se puede guardar", "error");
-      const globalSel = document.getElementById('global-supervisor');
-      const supervisor = globalSel ? globalSel.value : (currentUser.name || '');
-      const date = document.getElementById('daily-date').value;
-      if (!supervisor) return showNotify("Error de sesión. Seleccione usuario.", "error");
-      const detalles = [];
-      let error = false;
-
-      currentTasks.forEach((t, idx) => {
-        const metaEl = document.getElementById(`meta-${idx}`);
-        const execEl = document.getElementById(`exec-${idx}`);
-        if (!metaEl || !execEl) return; // skip
-        const meta = metaEl.value;
-        const exec = execEl.value;
-        const causaEl = document.getElementById(`causa-${idx}`);
-        const causa = causaEl ? causaEl.value : '';
-
-        if (meta === "" && exec === "") return; // skip empty rows
-
-        let ppc = 0;
-        if (parseFloat(meta) > 0) {
-          ppc = (parseFloat(exec) / parseFloat(meta)) * 100;
-        }
-
-        if (parseFloat(exec) < parseFloat(meta) && !causa) {
-          showNotify(`Falta justificar la desviación en: ${t.descripcion}`, "error");
-          if (causaEl) causaEl.focus();
-          error = true;
-          return;
-        }
-
-        detalles.push({
-          id_tarea: t.id_tarea,
-          descripcion: t.descripcion,
-          unidad: t.unidad,
-          meta_dia: meta,
-          ejecutado_dia: exec,
-          ppc_individual: Math.round(ppc > 100 ? 100 : ppc) + "%",
-          causa: causa || "Cumplido",
-          observacion: (document.getElementById(`obs-${idx}`) || {value:''}).value || ''
-        });
-      });
-
-      if (error) return;
-      if (detalles.length === 0) return showNotify("No hay datos para guardar.", "error");
-
-      const btn = document.getElementById('btn-submit-daily');
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Guardando...';
-
-      sendData({
+    const body = {
         action: "saveAvancePPC",
-        fecha_reporte: date,
-        supervisor: supervisor,
-        detalles: detalles
-      }, () => {
-        showNotify("Avance y PPC Guardados", "success");
-        loadDailyTasks();
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Calcular PPC y Guardar Reporte';
-      });
-    }
+        fecha_reporte: fecha,
+        supervisor,
+        detalles
+    };
 
-    // ---------- SEND DATA ----------
-    function sendData(payload, callback) {
-      fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      }).then(async (r) => {
-        if (!r.ok) {
-          const txt = await r.text().catch(()=>null);
-          throw new Error(`HTTP ${r.status}: ${txt || r.statusText}`);
-        }
-        return r.json();
-      }).then(res => {
-        if (res.status === 'success') callback && callback();
-        else showNotify("Error servidor: " + (res.message || 'error'), "error");
-      }).catch(e => {
-        console.error("sendData error:", e);
-        showNotify("Error de conexión. Verifique internet y la URL de la API.", "error");
-      });
-    }
+    try {
+        const r = await fetch(API_URL, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        });
 
-    // ---------- HELPERS ----------
-    function showNotify(msg, type='success') {
-      const el = document.getElementById('notification');
-      el.innerText = msg;
-      let bgClass = type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-blue-600';
-      el.className = `fixed top-4 right-4 px-6 py-4 rounded-lg shadow-xl text-white font-bold z-50 transform transition-all duration-500 ${bgClass}`;
-      el.classList.remove('hidden', 'opacity-0');
-      setTimeout(() => {
-        el.classList.add('opacity-0');
-        setTimeout(() => el.classList.add('hidden'), 500);
-      }, 3000);
-    }
+        const d = await r.json();
+        alert(d.message);
 
-    function escapeHtml(str) {
-      if (str === undefined || str === null) return '';
-      return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+    } catch (e) {
+        alert("Error guardando PPC");
     }
+}
 
-    function switchTab(tab) {
-      document.querySelectorAll('.view-section').forEach(el => el.style.display = 'none');
-      const view = document.getElementById('view-' + tab);
-      if (view) view.style.display = 'block';
+// --------- GUARDAR NOTA ----------
+async function guardarNotaCampo() {
+    const data = {
+        action: "saveNotaCampo",
+        emisor: document.getElementById("notaEmisor").value,
+        receptor: document.getElementById("notaReceptor").value,
+        asunto: document.getElementById("notaAsunto").value,
+        instruccion: document.getElementById("notaInstruccion").value
+    };
+
+    try {
+        const r = await fetch(API_URL, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(data)
+        });
+
+        const d = await r.json();
+        alert(d.message);
+
+    } catch (e) {
+        alert("Error guardando nota");
     }
-  </script>
+}
+
+// --------- LISTA DE NOTAS ----------
+async function cargarNotasEmitidas() {
+    try {
+        const r = await fetch(`${API_URL}?action=getNotasCampo`);
+        const d = await r.json();
+
+        const tabla = document.getElementById("tablaNotas");
+        tabla.innerHTML = `
+            <tr>
+                <th>Fecha</th>
+                <th>Emisor</th>
+                <th>Receptor</th>
+                <th>Asunto</th>
+                <th>Estado</th>
+            </tr>
+        `;
+
+        d.notas.forEach(n => {
+            tabla.innerHTML += `
+                <tr>
+                    <td>${n.fecha_emision}</td>
+                    <td>${n.emisor}</td>
+                    <td>${n.receptor}</td>
+                    <td>${n.asunto}</td>
+                    <td>${n.estado}</td>
+                </tr>
+            `;
+        });
+
+    } catch (e) {
+        alert("Error cargando notas");
+    }
+}
+
+</script>
+
 </body>
 </html>
