@@ -10,12 +10,10 @@
         .loader { border-top-color: #4f46e5; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        /* Estados de Vista */
         #app-content { display: none; }
         #login-screen { display: flex; }
-        .view-section { display: none; }
         
-        /* Modo Solo Lectura */
+        /* Modo Solo Lectura estricto */
         .readonly-mode input:not([type="date"]), 
         .readonly-mode select, 
         .readonly-mode textarea { 
@@ -23,22 +21,21 @@
             background-color: #f3f4f6; 
             border-color: #e5e7eb;
         }
-        .readonly-mode button[type="submit"], .readonly-mode .action-btn { display: none; }
+        .readonly-mode button[type="submit"], 
+        .readonly-mode .action-btn { display: none; }
         
-        /* Animaciones */
+        .ppc-badge { font-weight: bold; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; }
         .animate-fade-in { animation: fadeIn 0.5s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen font-sans text-gray-800 relative">
 
-    <!-- Notificaciones -->
     <div id="notification" class="hidden fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-xl text-white font-bold transform transition-all duration-500"></div>
 
-    <!-- ================= PANTALLA DE LOGIN ================= -->
+    <!-- PANTALLA DE ACCESO (LOGIN) -->
     <div id="login-screen" class="fixed inset-0 bg-gradient-to-br from-slate-900 to-blue-900 z-50 flex flex-col items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center animate-fade-in relative z-10">
-            <!-- Logo / Título -->
             <div class="mb-8 border-b border-gray-100 pb-6">
                 <div class="bg-blue-50 p-4 rounded-full w-20 h-20 mx-auto flex items-center justify-center mb-4 shadow-inner">
                     <i class="fas fa-hard-hat text-4xl text-blue-600"></i>
@@ -47,9 +44,8 @@
                 <p class="text-gray-500 text-sm font-medium">Sistema de Control de Avance de Obra</p>
             </div>
             
-            <!-- Botones de Perfil -->
             <div id="role-selector">
-                <p class="text-xs font-bold text-gray-400 mb-4 uppercase tracking-widest">Seleccione Perfil</p>
+                <p class="text-xs font-bold text-gray-400 mb-4 uppercase tracking-widest">Seleccione Perfil de Ingreso</p>
                 <div class="space-y-3">
                     <button onclick="selectRole('FISCAL')" class="w-full py-3 border border-gray-200 text-gray-600 bg-gray-50 hover:bg-blue-50 hover:border-blue-300 rounded-lg font-bold transition flex items-center justify-center px-4 group">
                         <i class="fas fa-user-shield mr-3 text-lg text-gray-400 group-hover:text-blue-500"></i> FISCAL DE OBRA
@@ -65,7 +61,7 @@
                 </div>
             </div>
 
-            <!-- Formulario de Login Supervisor -->
+            <!-- Autenticación de Supervisor (Segura) -->
             <div id="supervisor-auth-area" class="hidden mt-2 animate-fade-in text-left">
                 <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
                     <label class="block text-xs font-bold text-blue-800 mb-1 uppercase">Usuario</label>
@@ -87,7 +83,6 @@
             </div>
         </div>
         
-        <!-- Pie de Página (Login) -->
         <div class="absolute bottom-6 text-center w-full px-4 z-0">
             <p class="text-slate-400 text-[10px] md:text-xs opacity-60 font-light">
                 Desarrollado por Zacarias Ortega para el Proyecto Construcción Hospital de Segundo Nivel Isaias - Oruro
@@ -216,7 +211,7 @@
         // ==============================================
         // CONFIGURACIÓN
         // ==============================================
-        const API_URL = "https://script.google.com/macros/s/AKfycbzfc8xTWxmyymdJxgQI1xDkG-7L9qapy3SvfN8FOA0TKsrMQsKfkFkRXEij5i6nzpx-/exec";
+        const API_URL = "https://script.google.com/macros/s/AKfycbxWuSGue_W5N_tm8gg5QgeGyg6MT2ODZ5jASUOxKwn7bUwUI-9P5xlp6DM1RbvaFqie/exec";
         // ==============================================
 
         let currentTasks = [];
@@ -238,12 +233,8 @@
         // --- LOGIN Y ROLES ---
         
         function fetchUserList() {
-            // Si estamos en Vista Previa, simulamos datos
-            if (API_URL.includes("PEGUE")) {
-                if(window.location.protocol === 'blob:') {
-                    fillLoginDropdown(["Ing. Prueba 1", "Ing. Prueba 2"]);
-                    return;
-                }
+            if(API_URL.includes("PEGUE")) {
+                if(window.location.protocol === 'blob:') return; // Modo preview
                 showNotify("Configure la URL de la API", "error");
                 return;
             }
@@ -252,22 +243,15 @@
                 .then(r => r.json())
                 .then(res => {
                     if(res.status === 'success') {
-                        fillLoginDropdown(res.usuarios);
+                        const sel = document.getElementById('login-user');
+                        let options = '<option value="">-- Seleccione su Nombre --</option>';
+                        res.usuarios.forEach(u => options += `<option value="${u}">${u}</option>`);
+                        sel.innerHTML = options;
                     } else {
-                        showNotify("Error cargando lista de usuarios", "error");
+                        showNotify("Error cargando usuarios: " + res.message, "error");
                     }
                 })
-                .catch(e => {
-                    console.error(e);
-                    showNotify("Error de conexión. Verifique internet.", "error");
-                });
-        }
-
-        function fillLoginDropdown(users) {
-            const sel = document.getElementById('login-user');
-            let html = '<option value="">-- Seleccione su Nombre --</option>';
-            users.forEach(u => html += `<option value="${u}">${u}</option>`);
-            sel.innerHTML = html;
+                .catch(e => console.error("Error conexión:", e));
         }
 
         function selectRole(role) {
@@ -300,21 +284,21 @@
                 return;
             }
 
-            // Si estamos en vista previa, login simulado
+            // Vista Previa
             if (API_URL.includes("PEGUE") && window.location.protocol === 'blob:') {
-                enterApp({ name: nombre, role: 'SUPERVISOR' });
+                enterApp({ name: nombre || "Supervisor Prueba", role: 'SUPERVISOR' });
                 return;
             }
 
             btn.innerText = "Validando...";
             btn.disabled = true;
 
-            // Login Seguro contra el Servidor (v5.0)
+            // Login Seguro contra el Servidor (GET para evitar CORS de POST inicial)
             fetch(`${API_URL}?action=login&nombre=${encodeURIComponent(nombre)}&pass=${encodeURIComponent(pass)}`)
                 .then(r => r.json())
                 .then(res => {
                     if(res.status === 'success') {
-                        enterApp({ name: res.user.nombre, role: 'SUPERVISOR' }); // El servidor confirma el rol
+                        enterApp({ name: res.user.nombre, role: 'SUPERVISOR' });
                     } else {
                         msg.innerText = "Contraseña Incorrecta";
                         msg.classList.remove('hidden');
@@ -323,7 +307,7 @@
                     }
                 })
                 .catch(e => {
-                    msg.innerText = "Error de conexión";
+                    msg.innerText = "Error de conexión (Failed to Fetch)";
                     msg.classList.remove('hidden');
                     btn.innerText = "Ingresar";
                     btn.disabled = false;
@@ -336,23 +320,23 @@
             document.getElementById('app-content').style.display = 'block';
             
             document.getElementById('user-badge').innerHTML = `<i class="fas fa-user-circle mr-1"></i> ${user.name}`;
-            const roleText = user.role === 'READ_ONLY' ? 'Visualización' : 'Supervisor';
-            const roleClass = user.role === 'READ_ONLY' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800';
-            const badge = document.getElementById('role-badge');
-            badge.innerText = roleText;
-            badge.className = `text-xs font-bold px-2 py-0.5 rounded border ${roleClass}`;
+            document.getElementById('role-badge').innerText = user.role === 'READ_ONLY' ? 'Modo Visualización' : 'Modo Registro';
+            
+            const roleBadge = document.getElementById('role-badge');
+            roleBadge.className = user.role === 'READ_ONLY' 
+                ? "text-xs font-bold bg-green-100 text-green-800 px-3 py-1 rounded-full" 
+                : "text-xs font-bold bg-blue-100 text-blue-800 px-3 py-1 rounded-full";
 
-            // Configurar Permisos
             if (user.role === 'READ_ONLY') {
                 document.body.classList.add('readonly-mode');
                 document.getElementById('notes-form-container').style.display = 'none'; 
                 document.getElementById('view-plan').classList.add('hidden'); 
                 document.getElementById('btn-plan').style.display = 'none'; 
                 switchTab('daily'); 
+                loadDailyTasks(); // Carga inmediata en modo lectura
+            } else {
+                // Si es supervisor, no cargamos tareas hasta que él elija fecha o entre al tab
             }
-            
-            loadDailyTasks();
-            loadNotes();
         }
 
         // --- INTERFAZ ---
@@ -376,6 +360,9 @@
                 active.classList.remove('bg-white', 'text-gray-600', 'hover:text-blue-600', 'border-transparent');
                 active.classList.add('bg-blue-600', 'text-white', 'border-blue-800', 'scale-105', 'shadow-md');
             }
+
+            if (tab === 'daily') loadDailyTasks();
+            if (tab === 'notes') loadNotes();
         }
 
         function toggleDateInputs() {
@@ -386,7 +373,7 @@
 
             if (type === 'Diario') {
                 endContainer.style.display = 'none';
-                lblStart.innerText = 'Fecha de Ejecución';
+                lblStart.innerText = 'Fecha de Ejecución (Único Día)';
                 inputEnd.required = false;
             } else {
                 endContainer.style.display = 'block';
@@ -410,7 +397,7 @@
                 
                 container.innerHTML = '';
                 currentTasks = res.tareas;
-                calculatePPC(res.avances);
+                calculateDailyPPCDisplay(res.avances);
 
                 if(currentTasks.length === 0) {
                     container.innerHTML = '<div class="text-center p-8 bg-gray-50 rounded border border-dashed">No hay tareas programadas hoy.</div>';
@@ -475,10 +462,9 @@
             }
         }
 
-        function calculatePPC(avances) {
-            const el = document.getElementById('daily-ppc-score');
-            if(!avances || avances.length === 0) { el.innerText = "--%"; return; }
-            
+        function calculateDailyPPCDisplay(avances) {
+            const scoreEl = document.getElementById('daily-ppc-score');
+            if (!avances || avances.length === 0) { scoreEl.textContent = "--%"; return; }
             let total = 0, count = 0;
             avances.forEach(a => {
                 if(parseFloat(a.meta_dia) > 0) {
@@ -489,12 +475,14 @@
             });
             if(count===0) return;
             const avg = Math.round(total/count);
-            el.innerText = avg + "%";
-            el.className = avg >= 85 ? "text-4xl font-black text-green-600" : "text-4xl font-black text-red-600";
+            scoreEl.textContent = avg + "%";
+            scoreEl.className = avg >= 85 ? "text-4xl font-black text-green-600" : "text-4xl font-black text-red-600";
         }
 
         function loadNotes() {
             const container = document.getElementById('notes-list');
+            if(API_URL.includes("PEGUE")) return;
+            
             fetch(`${API_URL}?action=getNotasCampo`).then(r=>r.json()).then(res => {
                 container.innerHTML = '';
                 if(!res.notas || res.notas.length===0) { container.innerHTML = '<div class="text-center py-4 text-gray-400">Sin notas.</div>'; return; }
@@ -572,10 +560,12 @@
         }
 
         function sendData(payload, callback) {
+            if(API_URL.includes("PEGUE")) return showNotify("API no configurada", "error");
+            
             fetch(API_URL, { method: "POST", body: JSON.stringify(payload) })
             .then(r => r.json()).then(res => {
                 if(res.status === 'success') callback();
-                else showNotify("Error: " + res.message, "error");
+                else showNotify(res.message, "error");
             }).catch(e => showNotify("Error conexión", "error"));
         }
 
