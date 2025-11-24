@@ -7,8 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     <style>
-        .view-section { display: none; }
-        #view-daily { display: block; }
         .loader { border-top-color: #4f46e5; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
@@ -74,6 +72,12 @@
                 <select id="login-supervisor-select" class="w-full p-3 border border-indigo-300 rounded-lg mb-4 bg-indigo-50 focus:ring-2 focus:ring-indigo-500 outline-none text-gray-700">
                     <option value="">Cargando lista...</option>
                 </select>
+                
+                <!-- Mensaje de error si falla la carga -->
+                <div id="login-error-msg" class="hidden bg-red-100 text-red-700 p-2 rounded text-xs mb-3 border border-red-300">
+                    Error conectando con la base de datos.
+                </div>
+
                 <button onclick="loginSupervisor()" class="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 shadow-md transition">
                     Ingresar al Sistema
                 </button>
@@ -94,20 +98,15 @@
         
         <!-- Encabezado -->
         <header class="bg-white rounded-xl shadow-md p-4 mb-6 border-l-8 border-indigo-800 flex flex-col md:flex-row justify-between items-center">
-            <div class="flex items-center mb-4 md:mb-0">
-                <div class="bg-indigo-100 p-2 rounded-lg mr-4">
-                     <i class="fas fa-chart-pie text-2xl text-indigo-700"></i>
-                </div>
-                <div>
-                    <h1 class="text-xl font-bold text-gray-900 tracking-tight">SCAO Digital</h1>
-                    <div class="flex items-center gap-2 mt-1">
-                        <span id="user-badge" class="text-xs font-bold bg-gray-100 text-gray-600 px-2 py-0.5 rounded border border-gray-200">...</span>
-                        <span id="role-badge" class="text-xs font-bold bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-100">...</span>
-                    </div>
+            <div class="mb-2 md:mb-0">
+                <h1 class="text-2xl font-bold text-gray-900 tracking-tight">SCAO Digital</h1>
+                <div class="flex items-center gap-2 mt-1">
+                    <span id="user-badge" class="text-xs font-bold bg-gray-200 text-gray-700 px-3 py-1 rounded-full"><i class="fas fa-user mr-1"></i> ...</span>
+                    <span id="role-badge" class="text-xs font-bold bg-blue-100 text-blue-800 px-3 py-1 rounded-full">...</span>
                 </div>
             </div>
             <button onclick="location.reload()" class="text-xs text-red-500 hover:text-red-700 font-semibold flex items-center bg-red-50 px-4 py-2 rounded-lg hover:bg-red-100 transition">
-                <i class="fas fa-sign-out-alt mr-2"></i> Cerrar Sesión
+                <i class="fas fa-sign-out-alt mr-1"></i> Salir
             </button>
         </header>
 
@@ -310,21 +309,44 @@
         
         function fetchUserList() {
             if(API_URL.includes("PEGUE")) return;
-            fetch(`${API_URL}?action=getUsuarios`).then(r=>r.json()).then(res => {
-                if(res.status === 'success') {
-                    userListCache = res.usuarios;
+            
+            // 1. Cargar Supervisores (Usuarios)
+            fetch(`${API_URL}?action=getUsuarios`, { redirect: "follow" })
+                .then(r => r.json())
+                .then(res => {
                     const sel = document.getElementById('login-supervisor-select');
                     const globalSel = document.getElementById('global-supervisor'); // También el del header
                     
-                    // Solo añadir al dropdown global (oculto visualmente pero útil) si se necesita
-                    // El principal es el del login
-                    
-                    let options = '<option value="">-- Seleccione su Nombre --</option>';
-                    res.usuarios.forEach(u => options += `<option value="${u}">${u}</option>`);
-                    
-                    sel.innerHTML = options;
-                }
-            });
+                    if(res.status === 'success') {
+                        userListCache = res.usuarios;
+                        let options = '<option value="">-- Seleccione su Nombre --</option>';
+                        if(res.usuarios.length === 0) {
+                            options = '<option value="">Lista vacía (Revise Google Sheet)</option>';
+                        } else {
+                            res.usuarios.forEach(u => options += `<option value="${u}">${u}</option>`);
+                        }
+                        
+                        sel.innerHTML = options;
+                        if(globalSel) globalSel.innerHTML = options;
+                        
+                        // Ocultar error si existía
+                        document.getElementById('login-error-msg').classList.add('hidden');
+                    } else {
+                        document.getElementById('login-error-msg').textContent = "Error: " + res.message;
+                        document.getElementById('login-error-msg').classList.remove('hidden');
+                    }
+                })
+                .catch(e => {
+                     // Manejo de error silencioso o notificación suave en el select
+                     const sel = document.getElementById('login-supervisor-select');
+                     if(sel) sel.innerHTML = '<option value="">Error de conexión</option>';
+                     console.error("Error fetch usuarios:", e);
+                     const errDiv = document.getElementById('login-error-msg');
+                     if(errDiv) {
+                         errDiv.innerText = "⚠️ No se pudo conectar al servidor (Apps Script).";
+                         errDiv.classList.remove('hidden');
+                     }
+                });
         }
 
         function selectRole(role) {
@@ -344,8 +366,10 @@
 
         function loginSupervisor() {
             const name = document.getElementById('login-supervisor-select').value;
-            if (!name) return alert("Seleccione su nombre de la lista");
+            if (!name || name.includes("API no configurada")) return alert("Seleccione su nombre de la lista");
             enterApp({ name: name, role: 'SUPERVISOR' });
+            // Sincronizar el select del header
+            document.getElementById('global-supervisor').value = name;
         }
 
         function enterApp(user) {
@@ -446,12 +470,13 @@
             container.innerHTML = '<div class="text-center py-12 text-gray-500"><div class="loader h-8 w-8 border-4 border-t-4 border-indigo-500 rounded-full mx-auto mb-3"></div>Cargando plan del día...</div>';
 
             try {
-                const res = await fetch(`${API_URL}?action=getTareasDelDia&fecha=${date}`).then(r => r.json());
+                const res = await fetch(`${API_URL.trim()}?action=getTareasDelDia&fecha=${date}`, { redirect: "follow" }).then(r => r.json());
                 
                 if(res.status !== 'success') throw new Error(res.message);
                 
                 container.innerHTML = '';
                 currentTasks = res.tareas;
+                
                 calculateDailyPPCDisplay(res.avances);
 
                 if(currentTasks.length === 0) {
@@ -587,7 +612,7 @@
             const container = document.getElementById('notes-list');
             container.innerHTML = '<div class="text-center py-8 text-gray-400"><span class="loader h-6 w-6 border-2 border-indigo-500 rounded-full inline-block mr-2"></span> Cargando historial...</div>';
             
-            fetch(`${API_URL}?action=getNotasCampo`).then(r=>r.json()).then(res => {
+            fetch(`${API_URL}?action=getNotasCampo`, { redirect: "follow" }).then(r=>r.json()).then(res => {
                 container.innerHTML = '';
                 if(!res.notas || res.notas.length === 0) {
                     container.innerHTML = '<div class="text-center py-8 text-gray-400 bg-gray-50 rounded border border-dashed">No hay Notas de Campo registradas.</div>';
@@ -627,7 +652,7 @@
             e.preventDefault();
             if (currentUser.role === 'READ_ONLY') return;
             
-            const supervisor = currentUser.name; // Usamos el nombre seleccionado en el login
+            const supervisor = document.getElementById('global-supervisor').value;
             if(!supervisor) return showNotify("Error de usuario. Recargue.", "error");
             
             const data = Object.fromEntries(new FormData(e.target));
@@ -640,7 +665,7 @@
         function submitDailyReport() {
             if (currentUser.role === 'READ_ONLY') return;
             
-            const supervisor = currentUser.name; // Usamos el nombre seleccionado en el login
+            const supervisor = document.getElementById('global-supervisor').value;
             const date = document.getElementById('daily-date').value;
 
             if(!supervisor) return showNotify("Error de sesión. Seleccione usuario.", "error");
@@ -704,9 +729,14 @@
         }
 
         function sendData(payload, callback) {
-            fetch(API_URL, {
+            if(API_URL.includes("PEGUE")) {
+                 showNotify("ERROR: URL de API no configurada.", "error");
+                 return;
+            }
+            fetch(API_URL.trim(), {
                 method: "POST",
-                body: JSON.stringify(payload)
+                body: JSON.stringify(payload),
+                redirect: "follow"
             })
             .then(r => r.json())
             .then(res => {
