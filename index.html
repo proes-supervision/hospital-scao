@@ -584,4 +584,137 @@
         }
 
         function loadNotes() {
-            const container = document.getElementBy...
+            const container = document.getElementById('notes-list');
+            container.innerHTML = '<div class="text-center py-8 text-gray-400"><span class="loader h-6 w-6 border-2 border-indigo-500 rounded-full inline-block mr-2"></span> Cargando historial...</div>';
+            
+            fetch(`${API_URL}?action=getNotasCampo`).then(r=>r.json()).then(res => {
+                container.innerHTML = '';
+                if(!res.notas || res.notas.length === 0) {
+                    container.innerHTML = '<div class="text-center py-8 text-gray-400 bg-gray-50 rounded border border-dashed">No hay Notas de Campo registradas.</div>';
+                    return;
+                }
+                res.notas.forEach(n => {
+                    container.innerHTML += `
+                        <div class="bg-white p-4 rounded-lg shadow-sm border-l-4 border-indigo-500 mb-3 hover:shadow-md transition border border-gray-100">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">${n.fecha_emision.split(' ')[0]}</span>
+                                <span class="text-xs font-bold text-gray-500"><i class="fas fa-user mr-1"></i> ${n.emisor}</span>
+                            </div>
+                            <h4 class="font-bold text-gray-800 mb-1">${n.asunto}</h4>
+                            <p class="text-sm text-gray-600 mb-3 italic border-l-2 border-gray-200 pl-3">${n.instruccion}</p>
+                            <div class="flex justify-between items-center pt-2 border-t border-gray-100">
+                                <span class="text-xs text-gray-500">Para: <strong>${n.receptor}</strong></span>
+                                <span class="text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded border border-green-100">${n.estado}</span>
+                            </div>
+                        </div>`;
+                });
+            });
+        }
+
+        // --- GUARDADO ---
+
+        function savePlan(e) {
+            e.preventDefault();
+            const data = Object.fromEntries(new FormData(e.target));
+            if (data.tipo_plan === 'Diario') {
+                 data.fecha_fin = data.fecha_inicio; // Igualar fechas para diario
+            }
+            data.action = "savePlan";
+            sendData(data, () => { showNotify("Actividad Planificada Correctamente"); e.target.reset(); });
+        }
+
+        function saveNote(e) {
+            e.preventDefault();
+            if (currentUser.role === 'READ_ONLY') return;
+            
+            const supervisor = currentUser.name; // Usamos el nombre seleccionado en el login
+            if(!supervisor) return showNotify("Error de usuario. Recargue.", "error");
+            
+            const data = Object.fromEntries(new FormData(e.target));
+            data.action = "saveNotaCampo";
+            data.emisor = supervisor;
+            
+            sendData(data, () => { showNotify("Nota de Campo Emitida"); e.target.reset(); loadNotes(); });
+        }
+
+        function submitDailyReport() {
+            if (currentUser.role === 'READ_ONLY') return;
+            
+            const supervisor = currentUser.name; // Usamos el nombre seleccionado en el login
+            const date = document.getElementById('daily-date').value;
+
+            if(!supervisor) return showNotify("Error de sesión. Seleccione usuario.", "error");
+
+            const detalles = [];
+            let error = false;
+
+            currentTasks.forEach((t, idx) => {
+                const meta = document.getElementById(`meta-${idx}`).value;
+                const exec = document.getElementById(`exec-${idx}`).value;
+                const causa = document.getElementById(`causa-${idx}`).value;
+                
+                if (meta === "" || exec === "") return; // Skip empty
+
+                let ppc = 0;
+                if(parseFloat(meta) > 0) {
+                    ppc = (parseFloat(exec) / parseFloat(meta)) * 100;
+                }
+                
+                // Validar si PPC < 100% (o sea exec < meta) requiere causa
+                if (parseFloat(exec) < parseFloat(meta) && !causa) {
+                    showNotify(`Falta justificar la desviación en: ${t.descripcion}`, "error");
+                    document.getElementById(`causa-${idx}`).focus();
+                    error = true;
+                    return;
+                }
+                
+                let ppcDisplay = Math.round(ppc);
+                if(ppc > 100) ppcDisplay = 100; // Capamos a 100 para el reporte
+
+                detalles.push({
+                    id_tarea: t.id_tarea,
+                    descripcion: t.descripcion,
+                    unidad: t.unidad,
+                    meta_dia: meta,
+                    ejecutado_dia: exec,
+                    ppc_individual: ppcDisplay + "%",
+                    causa: causa || "Cumplido",
+                    observacion: document.getElementById(`obs-${idx}`).value
+                });
+            });
+
+            if(error) return;
+            if(detalles.length === 0) return showNotify("No hay datos para guardar.", "error");
+
+            const btn = document.getElementById('btn-submit-daily');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Guardando...';
+
+            sendData({
+                action: "saveAvancePPC",
+                fecha_reporte: date,
+                supervisor: supervisor,
+                detalles: detalles
+            }, () => { 
+                showNotify("Avance y PPC Guardados", "success");
+                loadDailyTasks(); // Recargar para ver actualizado
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Calcular PPC y Guardar Reporte';
+            });
+        }
+
+        function sendData(payload, callback) {
+            fetch(API_URL, {
+                method: "POST",
+                body: JSON.stringify(payload)
+            })
+            .then(r => r.json())
+            .then(res => {
+                if(res.status === 'success') callback();
+                else showNotify("Error servidor: " + res.message, "error");
+            })
+            .catch(e => showNotify("Error de conexión. Verifique internet.", "error"));
+        }
+    </script>
+</body>
+</html>
