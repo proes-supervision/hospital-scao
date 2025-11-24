@@ -10,25 +10,22 @@
         .loader { border-top-color: #4f46e5; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        /* Ocultar todo hasta el login */
         #app-content { display: none; }
         #login-screen { display: flex; }
         
-        /* Modo Solo Lectura */
-        .readonly-mode input, .readonly-mode select, .readonly-mode textarea { 
+        /* Modo Solo Lectura estricto */
+        .readonly-mode input:not([type="date"]), 
+        .readonly-mode select, 
+        .readonly-mode textarea { 
             pointer-events: none; 
             background-color: #f3f4f6; 
             border-color: #e5e7eb;
         }
-        .readonly-mode button[type="submit"], .readonly-mode .action-btn { display: none; }
+        .readonly-mode button[type="submit"], 
+        .readonly-mode .action-btn,
+        .readonly-mode .edit-only { display: none; }
         
-        /* Estilos PPC */
         .ppc-badge { font-weight: bold; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; }
-        .ppc-high { background-color: #d1fae5; color: #065f46; }
-        .ppc-mid { background-color: #fef3c7; color: #92400e; }
-        .ppc-low { background-color: #fee2e2; color: #991b1b; }
-        
-        /* Animación de entrada */
         .animate-fade-in { animation: fadeIn 0.5s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
@@ -37,106 +34,113 @@
 
     <div id="notification" class="hidden fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-xl text-white font-bold transform transition-all duration-500"></div>
 
-    <!-- PANTALLA DE SELECCIÓN DE ROL (LOGIN) -->
-    <div id="login-screen" class="fixed inset-0 bg-gradient-to-br from-blue-900 to-indigo-800 z-50 flex flex-col items-center justify-center p-4">
+    <!-- PANTALLA DE ACCESO (LOGIN) -->
+    <div id="login-screen" class="fixed inset-0 bg-gradient-to-br from-slate-900 to-blue-900 z-50 flex flex-col items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center animate-fade-in relative z-10">
-            <div class="mb-6">
-                <div class="bg-indigo-100 p-4 rounded-full w-20 h-20 mx-auto flex items-center justify-center mb-4">
-                    <i class="fas fa-hard-hat text-4xl text-indigo-600"></i>
+            <div class="mb-8 border-b border-gray-100 pb-6">
+                <div class="bg-blue-50 p-4 rounded-full w-20 h-20 mx-auto flex items-center justify-center mb-4 shadow-inner">
+                    <i class="fas fa-hard-hat text-4xl text-blue-600"></i>
                 </div>
                 <h1 class="text-3xl font-black text-gray-900 mb-1 tracking-tight">SCAO</h1>
                 <p class="text-gray-500 text-sm font-medium">Sistema de Control de Avance de Obra</p>
             </div>
             
-            <p class="text-xs font-bold text-gray-400 mb-6 uppercase tracking-widest border-b border-gray-100 pb-2">Seleccione Perfil</p>
-            
-            <div class="space-y-4">
-                <!-- Roles de Solo Lectura -->
-                <button onclick="selectRole('FISCAL')" class="w-full py-4 border-2 border-blue-100 text-blue-700 bg-blue-50 hover:bg-blue-100 hover:border-blue-300 rounded-xl font-bold transition flex items-center justify-center group">
-                    <i class="fas fa-user-shield mr-3 text-xl group-hover:scale-110 transition-transform"></i> FISCAL DE OBRA
-                </button>
-                
-                <button onclick="selectRole('CONTRATISTA')" class="w-full py-4 border-2 border-gray-100 text-gray-600 bg-gray-50 hover:bg-gray-100 hover:border-gray-300 rounded-xl font-bold transition flex items-center justify-center group">
-                    <i class="fas fa-building mr-3 text-xl group-hover:scale-110 transition-transform"></i> CONTRATISTA
-                </button>
-                
-                <!-- Rol de Supervisor (Requiere Identificación) -->
-                <button onclick="showSupervisorSelect()" class="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition transform hover:-translate-y-1 flex items-center justify-center group">
-                    <i class="fas fa-edit mr-3 text-xl group-hover:scale-110 transition-transform"></i> SUPERVISOR
-                </button>
+            <div id="role-selector">
+                <p class="text-xs font-bold text-gray-400 mb-4 uppercase tracking-widest">Seleccione Perfil de Ingreso</p>
+                <div class="space-y-3">
+                    <!-- Botón Fiscal (Limpio) -->
+                    <button onclick="selectRole('FISCAL')" class="w-full py-3 border border-gray-200 text-gray-600 bg-gray-50 hover:bg-blue-50 hover:border-blue-300 rounded-lg font-bold transition flex items-center justify-center px-4 group">
+                        <i class="fas fa-user-shield mr-3 text-lg text-gray-400 group-hover:text-blue-500"></i> FISCAL DE OBRA
+                    </button>
+                    
+                    <!-- Botón Contratista (Limpio) -->
+                    <button onclick="selectRole('CONTRATISTA')" class="w-full py-3 border border-gray-200 text-gray-600 bg-gray-50 hover:bg-blue-50 hover:border-blue-300 rounded-lg font-bold transition flex items-center justify-center px-4 group">
+                        <i class="fas fa-building mr-3 text-lg text-gray-400 group-hover:text-blue-500"></i> CONTRATISTA
+                    </button>
+                    
+                    <!-- Botón Supervisor (Limpio) -->
+                    <button onclick="showSupervisorAuth()" class="w-full py-4 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 transition transform hover:-translate-y-1 flex items-center justify-center mt-4">
+                        <i class="fas fa-user-edit mr-2"></i> SUPERVISOR
+                    </button>
+                </div>
             </div>
 
-            <!-- Selección Específica de Supervisor (Oculto) -->
-            <div id="supervisor-login-area" class="hidden mt-6 pt-6 border-t border-gray-100 animate-fade-in">
-                <label class="block text-left text-xs font-bold text-gray-500 mb-2 uppercase">Identifíquese:</label>
-                <select id="login-supervisor-select" class="w-full p-3 border border-indigo-300 rounded-lg mb-4 bg-indigo-50 focus:ring-2 focus:ring-indigo-500 outline-none text-gray-700">
-                    <option value="">Cargando lista...</option>
-                </select>
-                
-                <!-- Mensaje de error si falla la carga -->
-                <div id="login-error-msg" class="hidden bg-red-100 text-red-700 p-2 rounded text-xs mb-3 border border-red-300">
-                    Error conectando con la base de datos.
-                </div>
+            <!-- Autenticación de Supervisor (Segura) -->
+            <div id="supervisor-auth-area" class="hidden mt-2 animate-fade-in text-left">
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                    <label class="block text-xs font-bold text-blue-800 mb-1 uppercase">Supervisor Responsable</label>
+                    <select id="login-user" class="w-full p-2 border border-blue-200 rounded mb-3 bg-white text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option value="">-- Seleccione su Nombre --</option>
+                        <!-- Se llena con JS -->
+                    </select>
 
-                <button onclick="loginSupervisor()" class="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 shadow-md transition">
-                    Ingresar al Sistema
-                </button>
-                <button onclick="resetLogin()" class="mt-4 text-xs text-gray-400 hover:text-gray-600 underline">Cancelar</button>
+                    <label class="block text-xs font-bold text-blue-800 mb-1 uppercase">Contraseña de Acceso</label>
+                    <input type="password" id="login-pass" class="w-full p-2 border border-blue-200 rounded mb-4 bg-white text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Ingrese su clave...">
+
+                    <div class="flex gap-2">
+                        <button onclick="resetLogin()" class="flex-1 py-2 bg-white border border-gray-300 text-gray-600 rounded font-bold text-xs hover:bg-gray-50">Cancelar</button>
+                        <button onclick="attemptLogin()" class="flex-1 py-2 bg-blue-600 text-white rounded font-bold text-xs hover:bg-blue-700 shadow">Ingresar</button>
+                    </div>
+                </div>
             </div>
         </div>
         
-        <!-- Leyenda Pie de Página (Login) -->
         <div class="absolute bottom-6 text-center w-full px-4 z-0">
-            <p class="text-indigo-200 text-xs opacity-80 font-light">
+            <p class="text-slate-400 text-xs opacity-60 font-light">
                 Desarrollado por Zacarias Ortega para el Proyecto Construcción Hospital de Segundo Nivel Isaias - Oruro
             </p>
         </div>
     </div>
 
-    <!-- CONTENIDO DEL APLICATIVO -->
+    <!-- INTERFAZ PRINCIPAL -->
     <div id="app-content" class="hidden container mx-auto px-4 py-6 max-w-6xl pb-20">
         
         <!-- Encabezado -->
-        <header class="bg-white rounded-xl shadow-md p-4 mb-6 border-l-8 border-indigo-800 flex flex-col md:flex-row justify-between items-center">
-            <div class="mb-2 md:mb-0">
-                <h1 class="text-2xl font-bold text-gray-900 tracking-tight">SCAO Digital</h1>
-                <div class="flex items-center gap-2 mt-1">
-                    <span id="user-badge" class="text-xs font-bold bg-gray-200 text-gray-700 px-3 py-1 rounded-full"><i class="fas fa-user mr-1"></i> ...</span>
-                    <span id="role-badge" class="text-xs font-bold bg-blue-100 text-blue-800 px-3 py-1 rounded-full">...</span>
+        <header class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6 flex flex-col md:flex-row justify-between items-center">
+            <div class="flex items-center mb-4 md:mb-0">
+                <div class="bg-blue-600 p-2 rounded-lg mr-4 text-white shadow-md">
+                     <i class="fas fa-chart-line text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-gray-900 tracking-tight">SCAO Digital</h1>
+                    <div class="flex items-center gap-2 mt-1">
+                        <span id="user-badge" class="text-xs font-bold bg-gray-100 text-gray-600 px-2 py-0.5 rounded border border-gray-200">...</span>
+                        <span id="role-badge" class="text-xs font-bold bg-green-50 text-green-700 px-2 py-0.5 rounded border border-green-100">...</span>
+                    </div>
                 </div>
             </div>
-            <button onclick="location.reload()" class="text-xs text-red-500 hover:text-red-700 font-semibold flex items-center bg-red-50 px-4 py-2 rounded-lg hover:bg-red-100 transition">
-                <i class="fas fa-sign-out-alt mr-1"></i> Salir
+            <button onclick="location.reload()" class="text-xs text-red-500 hover:text-red-700 font-bold flex items-center bg-red-50 px-4 py-2 rounded-lg hover:bg-red-100 transition border border-red-100">
+                <i class="fas fa-power-off mr-2"></i> Cerrar Sesión
             </button>
         </header>
 
-        <!-- Menú Principal -->
+        <!-- Menú -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-8">
-            <button onclick="switchTab('plan')" id="btn-plan" class="py-4 bg-white rounded-xl shadow-sm text-gray-500 hover:text-indigo-600 font-bold border-2 border-transparent hover:border-indigo-100 transition-all flex items-center justify-center group">
-                <div class="bg-gray-100 group-hover:bg-indigo-100 p-2 rounded-full mr-3 transition-colors">
+            <button onclick="switchTab('plan')" id="btn-plan" class="py-4 bg-white rounded-xl shadow-sm text-gray-500 hover:text-blue-600 font-bold border-2 border-transparent hover:border-blue-100 transition-all flex items-center justify-center group">
+                <div class="bg-gray-100 group-hover:bg-blue-50 p-2 rounded-full mr-3 transition-colors text-gray-400 group-hover:text-blue-500">
                     <i class="fas fa-calendar-alt text-lg"></i>
                 </div> 
                 1. Planificación
             </button>
-            <button onclick="switchTab('daily')" id="btn-daily" class="py-4 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-200 font-bold border-2 border-indigo-600 transform scale-105 flex items-center justify-center z-10">
-                <div class="bg-indigo-500 p-2 rounded-full mr-3">
-                    <i class="fas fa-chart-line text-lg"></i>
+            <button onclick="switchTab('daily')" id="btn-daily" class="py-4 bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-200 font-bold border-2 border-blue-600 transform scale-105 flex items-center justify-center z-10">
+                <div class="bg-blue-500 p-2 rounded-full mr-3">
+                    <i class="fas fa-check-double text-lg"></i>
                 </div>
                 2. Control PPC
             </button>
-            <button onclick="switchTab('notes')" id="btn-notes" class="py-4 bg-white rounded-xl shadow-sm text-gray-500 hover:text-indigo-600 font-bold border-2 border-transparent hover:border-indigo-100 transition-all flex items-center justify-center group">
-                <div class="bg-gray-100 group-hover:bg-indigo-100 p-2 rounded-full mr-3 transition-colors">
+            <button onclick="switchTab('notes')" id="btn-notes" class="py-4 bg-white rounded-xl shadow-sm text-gray-500 hover:text-blue-600 font-bold border-2 border-transparent hover:border-blue-100 transition-all flex items-center justify-center group">
+                <div class="bg-gray-100 group-hover:bg-blue-50 p-2 rounded-full mr-3 transition-colors text-gray-400 group-hover:text-blue-500">
                     <i class="fas fa-clipboard-list text-lg"></i>
                 </div>
                 3. Notas de Campo
             </button>
         </div>
 
-        <!-- VISTA 1: CARGA DE PLANIFICACIÓN (Look-Ahead) -->
+        <!-- VISTA 1: PLANIFICACIÓN -->
         <div id="view-plan" class="view-section hidden animate-fade-in">
             <div class="bg-white rounded-xl shadow-lg p-8 border border-gray-200">
                 <h2 class="text-xl font-bold text-gray-800 mb-6 border-b pb-3 flex items-center">
-                    <span class="bg-indigo-100 text-indigo-800 py-1 px-3 rounded-lg text-xs mr-3 uppercase font-bold tracking-wider">Configuración</span>
+                    <span class="bg-blue-100 text-blue-800 py-1 px-3 rounded-lg text-xs mr-3 uppercase font-bold tracking-wider">Configuración</span>
                     Carga de Planificación
                 </h2>
                 <form id="form-plan" class="space-y-5">
@@ -177,7 +181,7 @@
                         </div>
                     </div>
                     <div class="text-right pt-6 border-t mt-4 action-btn">
-                        <button type="submit" class="bg-indigo-600 text-white px-8 py-3 rounded-lg hover:bg-indigo-700 font-bold shadow transition transform hover:-translate-y-0.5 flex items-center ml-auto">
+                        <button type="submit" class="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 font-bold shadow transition transform hover:-translate-y-0.5 flex items-center ml-auto">
                             <i class="fas fa-save mr-2"></i> Guardar en Planificación
                         </button>
                     </div>
@@ -193,7 +197,7 @@
                 <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
                     <div class="flex items-center gap-3 w-full md:w-auto">
                         <label class="font-bold text-gray-700 text-sm uppercase tracking-wide text-xs">Fecha de Control:</label>
-                        <input type="date" id="daily-date" class="border border-gray-300 p-2 rounded-lg text-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none bg-white shadow-sm font-bold">
+                        <input type="date" id="daily-date" class="border border-gray-300 p-2 rounded-lg text-gray-700 focus:ring-2 focus:ring-blue-500 outline-none bg-white shadow-sm font-bold">
                     </div>
                     <div class="text-center md:text-right w-full md:w-auto flex items-center justify-end gap-4">
                         <div class="text-right">
@@ -207,7 +211,7 @@
                 <!-- Lista de Tareas -->
                 <div id="tasks-container" class="space-y-6">
                     <div class="text-center py-12 text-gray-500">
-                        <div class="loader h-8 w-8 border-4 border-t-4 border-indigo-500 rounded-full mx-auto mb-3"></div>
+                        <div class="loader h-8 w-8 border-4 border-t-4 border-blue-500 rounded-full mx-auto mb-3"></div>
                         Cargando plan del día...
                     </div>
                 </div>
@@ -227,7 +231,7 @@
                 
                 <!-- Formulario de Emisión -->
                 <div class="lg:col-span-1 bg-white rounded-xl shadow-lg p-6 border border-gray-200 h-fit" id="notes-form-container">
-                    <h2 class="text-lg font-bold text-indigo-900 mb-4 border-b pb-2 flex items-center">
+                    <h2 class="text-lg font-bold text-blue-900 mb-4 border-b pb-2 flex items-center">
                         <i class="fas fa-pen-fancy mr-2"></i> Emitir Nota de Campo
                     </h2>
                     <form id="form-note" class="space-y-4">
@@ -243,7 +247,7 @@
                             <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Instrucción / Observación</label>
                             <textarea name="instruccion" rows="6" placeholder="Describa la instrucción técnica detallada..." class="w-full p-3 border rounded bg-gray-50 focus:bg-white transition" required></textarea>
                         </div>
-                        <button type="submit" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 shadow transition action-btn">
+                        <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 shadow transition action-btn">
                             Emitir Nota Digital
                         </button>
                     </form>
@@ -253,7 +257,7 @@
                 <div class="lg:col-span-2 bg-white rounded-xl shadow-lg p-6 border border-gray-200">
                     <div class="flex justify-between items-center mb-6 border-b pb-2">
                         <h2 class="text-lg font-bold text-gray-800">Historial de Notas (Digital)</h2>
-                        <button onclick="loadNotes()" class="text-xs text-indigo-600 font-bold hover:underline flex items-center bg-indigo-50 px-3 py-1 rounded-full"><i class="fas fa-sync-alt mr-1"></i> Refrescar</button>
+                        <button onclick="loadNotes()" class="text-xs text-blue-600 font-bold hover:underline flex items-center bg-blue-50 px-3 py-1 rounded-full"><i class="fas fa-sync-alt mr-1"></i> Refrescar</button>
                     </div>
                     <div id="notes-list" class="space-y-4 overflow-y-auto max-h-[600px] pr-2">
                         <!-- Notas inyectadas por JS -->
@@ -273,103 +277,75 @@
 
     <script>
         // ==============================================
-        // CONFIGURACIÓN API
-        // ** PEGUE SU URL AQUÍ **
+        // CONFIGURACIÓN Y BASE DE DATOS LOCAL (SEGURIDAD)
+        // ==============================================
+        
+        // 1. URL DE LA API
         const API_URL = "https://script.google.com/macros/s/AKfycbwfr3clRSqVxQsivhLgVoK_yIkzLYhsQMRM2txTwoAFGd_x0pcqO3N_9EnAo-sQKQRz/exec";
+
+        // 2. LISTA DE SUPERVISORES AUTORIZADOS Y SUS CLAVES
+        const EQUIPO_SUPERVISION = [
+            { nombre: "Ing. Zacarias Ortega", pass: "110380" },
+            { nombre: "Ing. Juan Jose Goitia",      pass: "jjgb" },
+            { nombre: "Arq. Edzon Copa",     pass: "ercr" },
+            { nombre: "Ing. Faviola Sivila",   pass: "fsf" }
+            { nombre: "Ing. Ariel Flores",   pass: "amf" }
+        ];
         // ==============================================
 
         let currentTasks = [];
         let currentUser = { name: "Invitado", role: "GUEST" }; 
-        let userListCache = [];
-
-        const causas = [
-            "Lluvia / Clima",
-            "Falta de Personal",
-            "Falta de Material",
-            "Espera de RDI",
-            "Falla de Equipo",
-            "Rendimiento Bajo",
-            "Interferencia",
-            "Otros"
-        ];
+        const causas = ["Lluvia / Clima", "Falta de Personal", "Falta de Material", "Espera de RDI", "Falla de Equipo", "Rendimiento Bajo", "Interferencia", "Otros"];
         
         document.addEventListener('DOMContentLoaded', () => {
+            // Precargar lista de supervisores en el login
+            const userSelect = document.getElementById('login-user');
+            EQUIPO_SUPERVISION.forEach(u => {
+                userSelect.innerHTML += `<option value="${u.nombre}">${u.nombre}</option>`;
+            });
+
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('daily-date').value = today;
             document.getElementById('daily-date').addEventListener('change', loadDailyTasks);
             
-            fetchUserList(); // Cargar lista de usuarios al inicio (para el login)
-            
-            // Listeners
             document.getElementById('form-plan').addEventListener('submit', savePlan);
             document.getElementById('form-note').addEventListener('submit', saveNote);
         });
 
-        // --- LÓGICA DE LOGIN Y ROLES ---
+        // --- LÓGICA DE ACCESO Y SEGURIDAD ---
         
-        function fetchUserList() {
-            if(API_URL.includes("PEGUE")) return;
-            
-            // 1. Cargar Supervisores (Usuarios)
-            fetch(`${API_URL}?action=getUsuarios`, { redirect: "follow" })
-                .then(r => r.json())
-                .then(res => {
-                    const sel = document.getElementById('login-supervisor-select');
-                    const globalSel = document.getElementById('global-supervisor'); // También el del header
-                    
-                    if(res.status === 'success') {
-                        userListCache = res.usuarios;
-                        let options = '<option value="">-- Seleccione su Nombre --</option>';
-                        if(res.usuarios.length === 0) {
-                            options = '<option value="">Lista vacía (Revise Google Sheet)</option>';
-                        } else {
-                            res.usuarios.forEach(u => options += `<option value="${u}">${u}</option>`);
-                        }
-                        
-                        sel.innerHTML = options;
-                        if(globalSel) globalSel.innerHTML = options;
-                        
-                        // Ocultar error si existía
-                        document.getElementById('login-error-msg').classList.add('hidden');
-                    } else {
-                        document.getElementById('login-error-msg').textContent = "Error: " + res.message;
-                        document.getElementById('login-error-msg').classList.remove('hidden');
-                    }
-                })
-                .catch(e => {
-                     // Manejo de error silencioso o notificación suave en el select
-                     const sel = document.getElementById('login-supervisor-select');
-                     if(sel) sel.innerHTML = '<option value="">Error de conexión</option>';
-                     console.error("Error fetch usuarios:", e);
-                     const errDiv = document.getElementById('login-error-msg');
-                     if(errDiv) {
-                         errDiv.innerText = "⚠️ No se pudo conectar al servidor (Apps Script).";
-                         errDiv.classList.remove('hidden');
-                     }
-                });
-        }
-
         function selectRole(role) {
-            if (role === 'FISCAL' || role === 'CONTRATISTA') {
-                // Modo Solo Lectura
-                enterApp({ name: role, role: 'READ_ONLY' });
-            } 
+            // Acceso directo para Solo Lectura
+            enterApp({ name: role, role: 'READ_ONLY' });
         }
 
-        function showSupervisorSelect() {
-            document.getElementById('supervisor-login-area').classList.remove('hidden');
+        function showSupervisorAuth() {
+            document.getElementById('role-selector').classList.add('hidden');
+            document.getElementById('supervisor-auth-area').classList.remove('hidden');
         }
-        
+
         function resetLogin() {
-             document.getElementById('supervisor-login-area').classList.add('hidden');
+            document.getElementById('supervisor-auth-area').classList.add('hidden');
+            document.getElementById('role-selector').classList.remove('hidden');
+            document.getElementById('login-pass').value = '';
         }
 
-        function loginSupervisor() {
-            const name = document.getElementById('login-supervisor-select').value;
-            if (!name || name.includes("API no configurada")) return alert("Seleccione su nombre de la lista");
-            enterApp({ name: name, role: 'SUPERVISOR' });
-            // Sincronizar el select del header
-            document.getElementById('global-supervisor').value = name;
+        function attemptLogin() {
+            const selectedName = document.getElementById('login-user').value;
+            const inputPass = document.getElementById('login-pass').value;
+
+            if (!selectedName) return showNotify("Seleccione su nombre", "error");
+            
+            // Verificar credenciales
+            const user = EQUIPO_SUPERVISION.find(u => u.nombre === selectedName);
+            
+            if (user && user.pass === inputPass) {
+                // ÉXITO
+                enterApp({ name: user.nombre, role: 'SUPERVISOR' });
+            } else {
+                // FALLO
+                showNotify("Contraseña Incorrecta", "error");
+            }
         }
 
         function enterApp(user) {
@@ -377,34 +353,27 @@
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('app-content').style.display = 'block';
             
-            // Actualizar UI con datos de usuario
             document.getElementById('user-badge').innerHTML = `<i class="fas fa-user-circle mr-1"></i> ${user.name}`;
-            document.getElementById('role-badge').innerText = user.role === 'READ_ONLY' ? 'Modo Visualización' : 'Modo Registro';
+            document.getElementById('role-badge').innerText = user.role === 'READ_ONLY' ? 'Modo Visualización' : 'Supervisor Autorizado';
             
             const roleBadge = document.getElementById('role-badge');
             roleBadge.className = user.role === 'READ_ONLY' 
                 ? "text-xs font-bold bg-green-100 text-green-800 px-3 py-1 rounded-full" 
-                : "text-xs font-bold bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full";
+                : "text-xs font-bold bg-blue-100 text-blue-800 px-3 py-1 rounded-full";
 
-            // Aplicar permisos de Solo Lectura
             if (user.role === 'READ_ONLY') {
                 document.getElementById('app-content').classList.add('readonly-mode');
-                document.getElementById('notes-form-container').style.display = 'none'; // Ocultar formulario de notas
-                document.getElementById('view-plan').classList.add('hidden'); // Ocultar carga de plan (opcional)
-                document.getElementById('btn-plan').style.display = 'none'; // Ocultar botón plan (opcional)
-                
-                // En modo lectura, cargamos datos y notas
-                loadDailyTasks();
-                loadNotes();
-                switchTab('daily'); // Ir directo a Control Diario
-            } else {
-                // Modo Supervisor
-                loadDailyTasks();
-                loadNotes();
+                document.getElementById('notes-form-container').style.display = 'none'; 
+                document.getElementById('view-plan').classList.add('hidden'); 
+                document.getElementById('btn-plan').style.display = 'none'; 
+                switchTab('daily'); 
             }
+            
+            loadDailyTasks();
+            loadNotes();
         }
 
-        // --- LÓGICA DE UI ---
+        // --- LÓGICA UI ---
 
         function toggleDateInputs() {
             const type = document.getElementById('plan-type').value;
@@ -414,9 +383,8 @@
 
             if (type === 'Diario') {
                 endContainer.style.display = 'none';
-                lblStart.innerText = 'Fecha de Ejecución (Único Día)';
+                lblStart.innerText = 'Fecha de Ejecución';
                 inputEnd.required = false;
-                // Para diario, fecha fin = fecha inicio en el backend
             } else {
                 endContainer.style.display = 'block';
                 lblStart.innerText = 'Fecha Inicio';
@@ -430,19 +398,18 @@
             if (tab === 'orders') viewId = 'view-notes'; 
             document.getElementById(viewId).style.display = 'block';
             
-            // Reset tabs visual
             ['plan', 'daily', 'notes'].forEach(t => {
                 const btn = document.getElementById('btn-' + t);
                 if(btn) {
-                    btn.classList.remove('bg-indigo-600', 'text-white', 'border-indigo-800', 'scale-105', 'shadow-md');
-                    btn.classList.add('bg-white', 'text-gray-600', 'hover:text-indigo-600', 'border-transparent');
+                    btn.classList.remove('bg-blue-600', 'text-white', 'border-blue-800', 'scale-105', 'shadow-md');
+                    btn.classList.add('bg-white', 'text-gray-600', 'hover:text-blue-600', 'border-transparent');
                 }
             });
             
             const active = document.getElementById('btn-' + tab);
             if(active) {
-                active.classList.remove('bg-white', 'text-gray-600', 'hover:text-indigo-600', 'border-transparent');
-                active.classList.add('bg-indigo-600', 'text-white', 'border-indigo-800', 'scale-105', 'shadow-md');
+                active.classList.remove('bg-white', 'text-gray-600', 'hover:text-blue-600', 'border-transparent');
+                active.classList.add('bg-blue-600', 'text-white', 'border-blue-800', 'scale-105', 'shadow-md');
             }
 
             if (tab === 'notes') loadNotes();
@@ -467,16 +434,15 @@
             
             const date = document.getElementById('daily-date').value;
             const container = document.getElementById('tasks-container');
-            container.innerHTML = '<div class="text-center py-12 text-gray-500"><div class="loader h-8 w-8 border-4 border-t-4 border-indigo-500 rounded-full mx-auto mb-3"></div>Cargando plan del día...</div>';
+            container.innerHTML = '<div class="text-center py-12 text-gray-500"><div class="loader h-8 w-8 border-4 border-t-4 border-blue-500 rounded-full mx-auto mb-3"></div>Cargando plan del día...</div>';
 
             try {
-                const res = await fetch(`${API_URL.trim()}?action=getTareasDelDia&fecha=${date}`, { redirect: "follow" }).then(r => r.json());
+                const res = await fetch(`${API_URL}?action=getTareasDelDia&fecha=${date}`).then(r => r.json());
                 
                 if(res.status !== 'success') throw new Error(res.message);
                 
                 container.innerHTML = '';
                 currentTasks = res.tareas;
-                
                 calculateDailyPPCDisplay(res.avances);
 
                 if(currentTasks.length === 0) {
@@ -490,19 +456,18 @@
                 }
 
                 currentTasks.forEach((t, idx) => {
-                    // Precargar datos si existen
                     const previo = res.avances ? res.avances.find(a => a.id_tarea == t.id_tarea) : null;
                     
-                    const metaVal = previo ? previo.meta_dia : t.meta_total; // Sugerir meta total por defecto si es diaria
+                    const metaVal = previo ? previo.meta_dia : t.meta_total; 
                     const ejecVal = previo ? previo.ejecutado_dia : '';
                     const obsVal = previo ? previo.observaciones : '';
                     
                     container.innerHTML += `
                     <div class="bg-white border border-gray-200 p-5 rounded-xl shadow-sm hover:shadow-md transition duration-300 group relative overflow-hidden">
-                        <div class="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
+                        <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
                         <div class="flex justify-between items-start mb-4 pl-2">
                             <div>
-                                <h4 class="font-bold text-lg text-gray-800 group-hover:text-indigo-700 transition">${t.descripcion}</h4>
+                                <h4 class="font-bold text-lg text-gray-800 group-hover:text-blue-700 transition">${t.descripcion}</h4>
                                 <div class="flex gap-2 mt-1">
                                     <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded border border-gray-200">ID: ${t.id_tarea}</span>
                                     <span class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-100">${t.tipo_plan || 'Plan'}</span>
@@ -514,9 +479,9 @@
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 bg-gray-50 p-4 rounded-lg border border-gray-100 items-center">
                             <!-- Programado -->
                             <div>
-                                <label class="block text-xs font-bold text-indigo-600 uppercase mb-1">Programado (Meta)</label>
+                                <label class="block text-xs font-bold text-blue-600 uppercase mb-1">Programado (Meta)</label>
                                 <div class="relative">
-                                    <input type="number" id="meta-${idx}" value="${metaVal}" class="w-full p-2 border-2 border-indigo-100 rounded-lg font-bold text-center focus:border-indigo-500 outline-none text-gray-700" placeholder="0.00" oninput="calcPPC(${idx})">
+                                    <input type="number" id="meta-${idx}" value="${metaVal}" class="w-full p-2 border-2 border-blue-100 rounded-lg font-bold text-center focus:border-blue-500 outline-none text-gray-700" placeholder="0.00" oninput="calcPPC(${idx})">
                                     <span class="absolute right-3 top-2.5 text-xs text-gray-400 font-bold">${t.unidad}</span>
                                 </div>
                             </div>
@@ -539,14 +504,14 @@
 
                         <!-- Desviación -->
                         <div id="deviation-row-${idx}" class="mt-4 hidden p-3 bg-red-50 rounded border border-red-100 animate-fade-in">
-                            <label class="block text-xs font-bold text-red-600 uppercase mb-1"><i class="fas fa-exclamation-circle mr-1"></i> Causa de Desviación (Requerido)</label>
+                            <label class="block text-xs font-bold text-red-600 uppercase mb-1"><i class="fas fa-exclamation-circle mr-1"></i> Causa de Desviación</label>
                             <select id="causa-${idx}" class="w-full p-2 border border-red-300 bg-white rounded text-sm text-gray-700 focus:ring-red-500">
                                 <option value="">Seleccione motivo...</option>
                                 ${causas.map(c => `<option value="${c}">${c}</option>`).join('')}
                             </select>
                         </div>
                         
-                        <input type="text" id="obs-${idx}" value="${obsVal}" class="w-full mt-4 p-2 text-sm text-gray-600 placeholder-gray-400 border-b border-transparent focus:border-indigo-300 focus:bg-gray-50 transition-all outline-none rounded" placeholder="Observaciones adicionales...">
+                        <input type="text" id="obs-${idx}" value="${obsVal}" class="w-full mt-4 p-2 text-sm text-gray-600 placeholder-gray-400 border-b border-transparent focus:border-blue-300 focus:bg-gray-50 transition-all outline-none rounded" placeholder="Observaciones adicionales...">
                     </div>`;
                     
                     if(metaVal && ejecVal) calcPPC(idx);
@@ -592,7 +557,7 @@
                 let exec = parseFloat(a.ejecutado_dia);
                 if (meta > 0) {
                     let ppc = (exec / meta) * 100;
-                    if (ppc > 100) ppc = 100; // Capamos a 100 para el promedio del indicador
+                    if (ppc > 100) ppc = 100; 
                     totalPPC += ppc;
                     count++;
                 }
@@ -610,9 +575,9 @@
 
         function loadNotes() {
             const container = document.getElementById('notes-list');
-            container.innerHTML = '<div class="text-center py-8 text-gray-400"><span class="loader h-6 w-6 border-2 border-indigo-500 rounded-full inline-block mr-2"></span> Cargando historial...</div>';
+            container.innerHTML = '<div class="text-center py-8 text-gray-400"><span class="loader h-6 w-6 border-2 border-blue-500 rounded-full inline-block mr-2"></span> Cargando historial...</div>';
             
-            fetch(`${API_URL}?action=getNotasCampo`, { redirect: "follow" }).then(r=>r.json()).then(res => {
+            fetch(`${API_URL}?action=getNotasCampo`).then(r=>r.json()).then(res => {
                 container.innerHTML = '';
                 if(!res.notas || res.notas.length === 0) {
                     container.innerHTML = '<div class="text-center py-8 text-gray-400 bg-gray-50 rounded border border-dashed">No hay Notas de Campo registradas.</div>';
@@ -620,9 +585,9 @@
                 }
                 res.notas.forEach(n => {
                     container.innerHTML += `
-                        <div class="bg-white p-4 rounded-lg shadow-sm border-l-4 border-indigo-500 mb-3 hover:shadow-md transition border border-gray-100">
+                        <div class="bg-white p-4 rounded-lg shadow-sm border-l-4 border-blue-500 mb-3 hover:shadow-md transition border border-gray-100">
                             <div class="flex justify-between items-center mb-2">
-                                <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">${n.fecha_emision.split(' ')[0]}</span>
+                                <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">${n.fecha_emision.split(' ')[0]}</span>
                                 <span class="text-xs font-bold text-gray-500"><i class="fas fa-user mr-1"></i> ${n.emisor}</span>
                             </div>
                             <h4 class="font-bold text-gray-800 mb-1">${n.asunto}</h4>
@@ -652,7 +617,7 @@
             e.preventDefault();
             if (currentUser.role === 'READ_ONLY') return;
             
-            const supervisor = document.getElementById('global-supervisor').value;
+            const supervisor = currentUser.name; 
             if(!supervisor) return showNotify("Error de usuario. Recargue.", "error");
             
             const data = Object.fromEntries(new FormData(e.target));
@@ -665,7 +630,7 @@
         function submitDailyReport() {
             if (currentUser.role === 'READ_ONLY') return;
             
-            const supervisor = document.getElementById('global-supervisor').value;
+            const supervisor = currentUser.name; 
             const date = document.getElementById('daily-date').value;
 
             if(!supervisor) return showNotify("Error de sesión. Seleccione usuario.", "error");
@@ -729,14 +694,10 @@
         }
 
         function sendData(payload, callback) {
-            if(API_URL.includes("PEGUE")) {
-                 showNotify("ERROR: URL de API no configurada.", "error");
-                 return;
-            }
-            fetch(API_URL.trim(), {
+            if(API_URL.includes("PEGUE")) { showNotify("ERROR: URL de API no configurada.", "error"); return; }
+            fetch(API_URL, {
                 method: "POST",
-                body: JSON.stringify(payload),
-                redirect: "follow"
+                body: JSON.stringify(payload)
             })
             .then(r => r.json())
             .then(res => {
